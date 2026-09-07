@@ -5,7 +5,7 @@ FUTURISTIC WRIST-MOUNTED ELECTRONIC DEVICE - FUSION 360 PYTHON GENERATOR
 This script generates a complete parametric Fusion 360 CAD model of a rugged,
 futuristic sci-fi wrist communicator.
 
-CORRECTED VERSION - Uses proper Fusion 360 API methods
+CORRECTED VERSION - Uses only methods available in current Fusion 360 API
 """
 
 import adsk.core
@@ -39,7 +39,6 @@ def run(context):
         create_hinges()
         create_buckle()
         
-        design.recompute()
         ui.messageBox("Wrist Device created successfully!", "Success")
         
     except Exception as e:
@@ -110,8 +109,6 @@ def create_main_housing():
             adsk.core.Point3D.create(-hl, -hw, 0)
         )
         
-        sketch.close()
-        
         # Extrude
         profiles = sketch.profiles
         if profiles.count > 0:
@@ -147,8 +144,6 @@ def create_control_buttons():
             
             circles = sketch.sketchCurves.sketchCircles
             circles.addByCenterAndRadius(adsk.core.Point3D.create(x, y, 0), btn_dia / 2.0)
-            
-            sketch.close()
             
             profiles = sketch.profiles
             if profiles.count > 0:
@@ -188,8 +183,6 @@ def create_strap():
         lines.addByTwoPoints(adsk.core.Point3D.create(x2, y2, 0), adsk.core.Point3D.create(x1, y2, 0))
         lines.addByTwoPoints(adsk.core.Point3D.create(x1, y2, 0), adsk.core.Point3D.create(x1, y1, 0))
         
-        sketch.close()
-        
         profiles = sketch.profiles
         if profiles.count > 0:
             profile = profiles.item(0)
@@ -218,7 +211,6 @@ def create_hinges():
         sketch.name = "Left_Hinge_Sketch"
         circles = sketch.sketchCurves.sketchCircles
         circles.addByCenterAndRadius(adsk.core.Point3D.create(-7.2, -2.5, 0), hinge_dia / 2.0)
-        sketch.close()
         
         profiles = sketch.profiles
         if profiles.count > 0:
@@ -238,7 +230,6 @@ def create_hinges():
         sketch2.name = "Right_Hinge_Sketch"
         circles2 = sketch2.sketchCurves.sketchCircles
         circles2.addByCenterAndRadius(adsk.core.Point3D.create(7.2, -2.5, 0), hinge_dia / 2.0)
-        sketch2.close()
         
         profiles2 = sketch2.profiles
         if profiles2.count > 0:
@@ -268,8 +259,6 @@ def create_buckle():
         lines.addByTwoPoints(adsk.core.Point3D.create(2.0, -5.5, 0), adsk.core.Point3D.create(2.0, -4.5, 0))
         lines.addByTwoPoints(adsk.core.Point3D.create(2.0, -4.5, 0), adsk.core.Point3D.create(-2.0, -4.5, 0))
         lines.addByTwoPoints(adsk.core.Point3D.create(-2.0, -4.5, 0), adsk.core.Point3D.create(-2.0, -5.5, 0))
-        
-        sketch.close()
         
         profiles = sketch.profiles
         if profiles.count > 0:
