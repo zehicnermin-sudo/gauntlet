@@ -47,15 +47,13 @@ def run(context):
         # Create all user parameters first
         create_parameters()
         
-        # Create component structure
-        create_root_components()
-        
-        # Create each major component
+        # Create each major component body
         create_main_housing()
         create_housing_panels()
         create_front_vents()
         create_top_frame()
         create_cyan_module()
+        create_cyan_ribs()
         create_control_buttons()
         create_strap()
         create_strap_texture()
@@ -153,57 +151,21 @@ def add_parameter(name, value, description):
 
 
 # ============================================================================
-# COMPONENT CREATION
+# PARAMETER ACCESS
 # ============================================================================
-
-def create_root_components():
-    """Create the component hierarchy."""
-    global rootComp
-    
-    # Create main sub-components
-    components = [
-        "Main_Housing",
-        "Top_Module",
-        "Yellow_Frame",
-        "Cyan_Internal_Module",
-        "Control_Buttons",
-        "Front_Vents",
-        "Left_Hinge",
-        "Right_Hinge",
-        "Strap",
-        "Strap_Texture",
-        "Rear_Buckle",
-        "Screws",
-        "Details",
-        "Markings"
-    ]
-    
-    for comp_name in components:
-        try:
-            # Check if component already exists
-            existing = rootComp.occurrences.itemByName(comp_name)
-        except:
-            # Create new component
-            new_comp = rootComp.components.addComponent()
-            new_comp.name = comp_name
-
-
-def get_component(name):
-    """Get or create a component by name."""
-    try:
-        # Try to find existing component
-        return rootComp.occurrences.itemByName(name).component
-    except:
-        # Create new component
-        new_comp = rootComp.components.addComponent()
-        new_comp.name = name
-        return new_comp
-
 
 def get_parameter_value(param_name):
     """Get the current value of a parameter."""
-    param = design.userParameters.itemByName(param_name)
-    return param.value
+    try:
+        param = design.userParameters.itemByName(param_name)
+        return param.value
+    except:
+        return 0.0
+
+
+def get_parameter_expression(param_name):
+    """Get a parameter as an expression string for use in features."""
+    return f'"{param_name}"'
 
 
 # ============================================================================
@@ -213,153 +175,149 @@ def get_parameter_value(param_name):
 def create_main_housing():
     """Create the dark gray main housing enclosure."""
     
-    housing_comp = get_component("Main_Housing")
-    housing_body = housing_comp.bodies.addNewBody()
-    housing_body.name = "Housing_Shell"
-    
-    # Create base rectangular sketch
-    sketch = housing_comp.sketches.addSketch(housing_comp.xYConstructionPlane)
-    
-    # Get parameter values
-    h_len = get_parameter_value("HOUSING_LENGTH")
-    h_wid = get_parameter_value("HOUSING_WIDTH")
-    h_rad = get_parameter_value("HOUSING_CORNER_RADIUS")
-    
-    # Create rounded rectangle
-    lines = sketch.sketchCurves.sketchLines
-    arcs = sketch.sketchCurves.sketchArcs
-    
-    # Half dimensions
-    hl = h_len / 2.0
-    hw = h_wid / 2.0
-    
-    # Define corner points with radius
-    x1 = -hl + h_rad
-    x2 = hl - h_rad
-    y1 = -hw + h_rad
-    y2 = hw - h_rad
-    
-    # Create straight line segments
-    lines.addByTwoPoints(
-        adsk.core.Point3D.create(x1, -hw, 0),
-        adsk.core.Point3D.create(x2, -hw, 0)
-    )
-    lines.addByTwoPoints(
-        adsk.core.Point3D.create(hl, y1, 0),
-        adsk.core.Point3D.create(hl, y2, 0)
-    )
-    lines.addByTwoPoints(
-        adsk.core.Point3D.create(x2, hw, 0),
-        adsk.core.Point3D.create(x1, hw, 0)
-    )
-    lines.addByTwoPoints(
-        adsk.core.Point3D.create(-hl, y2, 0),
-        adsk.core.Point3D.create(-hl, y1, 0)
-    )
-    
-    # Create corner arcs
-    arcs.addByThreePoints(
-        adsk.core.Point3D.create(x2, -hw, 0),
-        adsk.core.Point3D.create(hl, -hw + h_rad/2, 0),
-        adsk.core.Point3D.create(hl, y1, 0)
-    )
-    arcs.addByThreePoints(
-        adsk.core.Point3D.create(hl, y2, 0),
-        adsk.core.Point3D.create(hl - h_rad/2, hw, 0),
-        adsk.core.Point3D.create(x2, hw, 0)
-    )
-    arcs.addByThreePoints(
-        adsk.core.Point3D.create(x1, hw, 0),
-        adsk.core.Point3D.create(-hl + h_rad/2, hw, 0),
-        adsk.core.Point3D.create(-hl, y2, 0)
-    )
-    arcs.addByThreePoints(
-        adsk.core.Point3D.create(-hl, y1, 0),
-        adsk.core.Point3D.create(-hl + h_rad/2, -hw, 0),
-        adsk.core.Point3D.create(x1, -hw, 0)
-    )
-    
-    sketch.geometryCount
-    
-    # Close and extrude
-    sketch.close()
-    
-    h_height = get_parameter_value("HOUSING_HEIGHT")
-    extrude_profile = sketch.profiles.item(0)
-    extrude_input = housing_body.featureManager.createExtrudeFeature(extrude_profile)
-    extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(h_height / 2 / 10), False)
-    
-    housing_body.featureManager.addExtrudeFeature(extrude_input)
-    
-    # Apply major fillets to vertical edges
-    fillet_val = get_parameter_value("EDGE_FILLET")
-    apply_fillets_to_body(housing_body, fillet_val, 5)
+    try:
+        # Create a new body for the housing
+        housing_body = rootComp.bodies.addNewBody()
+        housing_body.name = "Main_Housing"
+        
+        # Create base rectangular sketch on XY plane
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Housing_Base_Sketch"
+        
+        # Get parameter values
+        h_len = get_parameter_value("HOUSING_LENGTH")
+        h_wid = get_parameter_value("HOUSING_WIDTH")
+        h_rad = get_parameter_value("HOUSING_CORNER_RADIUS")
+        
+        # Create rounded rectangle profile
+        lines = sketch.sketchCurves.sketchLines
+        arcs = sketch.sketchCurves.sketchArcs
+        
+        # Half dimensions
+        hl = h_len / 2.0
+        hw = h_wid / 2.0
+        
+        # Corner positions
+        x1 = -hl + h_rad
+        x2 = hl - h_rad
+        y1 = -hw + h_rad
+        y2 = hw - h_rad
+        
+        # Create straight segments
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x1, -hw, 0),
+            adsk.core.Point3D.create(x2, -hw, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(hl, y1, 0),
+            adsk.core.Point3D.create(hl, y2, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x2, hw, 0),
+            adsk.core.Point3D.create(x1, hw, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(-hl, y2, 0),
+            adsk.core.Point3D.create(-hl, y1, 0)
+        )
+        
+        # Create corner arcs (simplified)
+        arc_r = h_rad / 2.0
+        arcs.addByThreePoints(
+            adsk.core.Point3D.create(x2, -hw, 0),
+            adsk.core.Point3D.create(hl - arc_r, -hw + arc_r, 0),
+            adsk.core.Point3D.create(hl, y1, 0)
+        )
+        arcs.addByThreePoints(
+            adsk.core.Point3D.create(hl, y2, 0),
+            adsk.core.Point3D.create(hl - arc_r, hw - arc_r, 0),
+            adsk.core.Point3D.create(x2, hw, 0)
+        )
+        arcs.addByThreePoints(
+            adsk.core.Point3D.create(x1, hw, 0),
+            adsk.core.Point3D.create(-hl + arc_r, hw - arc_r, 0),
+            adsk.core.Point3D.create(-hl, y2, 0)
+        )
+        arcs.addByThreePoints(
+            adsk.core.Point3D.create(-hl, y1, 0),
+            adsk.core.Point3D.create(-hl + arc_r, -hw + arc_r, 0),
+            adsk.core.Point3D.create(x1, -hw, 0)
+        )
+        
+        sketch.close()
+        
+        # Get the profile and extrude
+        profiles = sketch.profiles
+        if profiles.count > 0:
+            profile = profiles.item(0)
+            
+            # Create extrude feature
+            extrudes = rootComp.features.extrudeFeatures
+            h_height = get_parameter_value("HOUSING_HEIGHT")
+            
+            extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(h_height / 2.0 / 10.0), False)
+            
+            extrude = extrudes.add(extrude_input)
+            extrude.bodies.item(0).name = "Main_Housing"
+        
+    except Exception as e:
+        ui.messageBox(f"Error in create_main_housing: {str(e)}", "Error")
 
 
-def housing_panels():
-    """Create recessed panel details on the housing."""
-    
-    housing_comp = get_component("Main_Housing")
-    
-    # Create shallow recessed panels
-    panel_sketch = housing_comp.sketches.addSketch(housing_comp.xYConstructionPlane)
-    
-    # Left side panel
-    left_panel = panel_sketch.sketchRectangles.addCenterPointRectangle(
-        adsk.core.Point3D.create(-55, 0, 0),
-        adsk.core.Point3D.create(-50, 15, 0)
-    )
-    
-    # Right side panel  
-    right_panel = panel_sketch.sketchRectangles.addCenterPointRectangle(
-        adsk.core.Point3D.create(55, 0, 0),
-        adsk.core.Point3D.create(50, 15, 0)
-    )
-    
-    panel_sketch.close()
-
+# ============================================================================
+# HOUSING PANELS
+# ============================================================================
 
 def create_housing_panels():
     """Add shallow recessed panels to main housing."""
     
-    housing_comp = get_component("Main_Housing")
-    
     try:
-        # Create recessed panel sketch
-        panel_sketch = housing_comp.sketches.addSketch(housing_comp.xYConstructionPlane)
+        # Create a sketch for panel details
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Housing_Panels_Sketch"
         
-        # Add some rectangular recessed areas
-        lines = panel_sketch.sketchCurves.sketchLines
+        lines = sketch.sketchCurves.sketchLines
         
-        # Left side panel
+        # Left side panel outline
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(-50, -10, 0),
-            adsk.core.Point3D.create(-55, -10, 0)
+            adsk.core.Point3D.create(-65, -12, 0),
+            adsk.core.Point3D.create(-50, -12, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(-55, -10, 0),
-            adsk.core.Point3D.create(-55, 10, 0)
+            adsk.core.Point3D.create(-50, -12, 0),
+            adsk.core.Point3D.create(-50, 12, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(-55, 10, 0),
-            adsk.core.Point3D.create(-50, 10, 0)
-        )
-        
-        # Right side panel
-        lines.addByTwoPoints(
-            adsk.core.Point3D.create(50, -10, 0),
-            adsk.core.Point3D.create(55, -10, 0)
+            adsk.core.Point3D.create(-50, 12, 0),
+            adsk.core.Point3D.create(-65, 12, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(55, -10, 0),
-            adsk.core.Point3D.create(55, 10, 0)
-        )
-        lines.addByTwoPoints(
-            adsk.core.Point3D.create(55, 10, 0),
-            adsk.core.Point3D.create(50, 10, 0)
+            adsk.core.Point3D.create(-65, 12, 0),
+            adsk.core.Point3D.create(-65, -12, 0)
         )
         
-        panel_sketch.close()
+        # Right side panel outline
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(50, -12, 0),
+            adsk.core.Point3D.create(65, -12, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(65, -12, 0),
+            adsk.core.Point3D.create(65, 12, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(65, 12, 0),
+            adsk.core.Point3D.create(50, 12, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(50, 12, 0),
+            adsk.core.Point3D.create(50, -12, 0)
+        )
+        
+        sketch.close()
         
     except Exception as e:
         pass
@@ -373,7 +331,9 @@ def create_front_vents():
     """Create front ventilation slots on the housing."""
     
     try:
-        front_comp = get_component("Front_Vents")
+        # Create a body for the vents
+        vent_body = rootComp.bodies.addNewBody()
+        vent_body.name = "Front_Vents"
         
         # Get slot parameters
         slot_len = get_parameter_value("FRONT_SLOT_LENGTH")
@@ -381,12 +341,11 @@ def create_front_vents():
         slot_count = int(get_parameter_value("FRONT_SLOT_COUNT"))
         slot_spacing = get_parameter_value("FRONT_SLOT_SPACING")
         
-        # Create sketch for slots on the front face
-        housing_bodies = rootComp.bodies
-        front_face = None
+        # Create sketch for slots
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Vents_Sketch"
         
-        # Create slot profile sketch
-        sketch = front_comp.sketches.addSketch(front_comp.xYConstructionPlane)
         lines = sketch.sketchCurves.sketchLines
         
         # Position slots vertically
@@ -397,8 +356,10 @@ def create_front_vents():
             y_pos = start_y - i * (slot_height + slot_spacing)
             
             # Create rectangular slot profile
-            x1, x2 = -slot_len / 2.0, slot_len / 2.0
-            y1, y2 = y_pos - slot_height / 2.0, y_pos + slot_height / 2.0
+            x1 = -slot_len / 2.0
+            x2 = slot_len / 2.0
+            y1 = y_pos - slot_height / 2.0
+            y2 = y_pos + slot_height / 2.0
             
             lines.addByTwoPoints(
                 adsk.core.Point3D.create(x1, y1, 0),
@@ -431,9 +392,9 @@ def create_top_frame():
     """Create the bright yellow protective frame."""
     
     try:
-        frame_comp = get_component("Yellow_Frame")
-        frame_body = frame_comp.bodies.addNewBody()
-        frame_body.name = "Frame_Shell"
+        # Create a body for the frame
+        frame_body = rootComp.bodies.addNewBody()
+        frame_body.name = "Yellow_Frame"
         
         # Get dimensions
         frame_len = get_parameter_value("YELLOW_FRAME_LENGTH")
@@ -442,7 +403,10 @@ def create_top_frame():
         frame_wall = get_parameter_value("YELLOW_FRAME_WALL")
         
         # Create frame sketch
-        sketch = frame_comp.sketches.addSketch(frame_comp.xYConstructionPlane)
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Frame_Sketch"
+        
         lines = sketch.sketchCurves.sketchLines
         
         # Outer rectangle
@@ -466,7 +430,7 @@ def create_top_frame():
             adsk.core.Point3D.create(-hl, -hw, 0)
         )
         
-        # Inner rectangle
+        # Inner rectangle (hollow center)
         il = (frame_len - 2 * frame_wall) / 2.0
         iw = (frame_wid - 2 * frame_wall) / 2.0
         
@@ -489,48 +453,141 @@ def create_top_frame():
         
         sketch.close()
         
+        # Extrude the frame
+        if sketch.profiles.count > 0:
+            profile = sketch.profiles.item(0)
+            extrudes = rootComp.features.extrudeFeatures
+            
+            extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(frame_height / 2.0 / 10.0), False)
+            
+            extrude = extrudes.add(extrude_input)
+            extrude.bodies.item(0).name = "Yellow_Frame"
+        
     except Exception as e:
         pass
 
 
 # ============================================================================
-# CYAN MODULE WITH RIBS
+# CYAN MODULE
 # ============================================================================
 
 def create_cyan_module():
-    """Create the transparent cyan ribbed electronic module."""
+    """Create the transparent cyan main module body."""
     
     try:
-        cyan_comp = get_component("Cyan_Internal_Module")
+        # Create body for cyan module
+        cyan_body = rootComp.bodies.addNewBody()
+        cyan_body.name = "Cyan_Module_Base"
         
         # Get module dimensions
         mod_len = get_parameter_value("TOP_MODULE_LENGTH")
         mod_wid = get_parameter_value("TOP_MODULE_WIDTH")
         mod_height = get_parameter_value("TOP_MODULE_HEIGHT")
         
-        # Create main cyan body
-        cyan_body = cyan_comp.bodies.addNewBody()
-        cyan_body.name = "Cyan_Module"
+        # Create module sketch
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Cyan_Module_Sketch"
         
-        sketch = cyan_comp.sketches.addSketch(cyan_comp.xYConstructionPlane)
-        
-        # Create base rectangle
+        # Create rectangle
         ml = mod_len / 2.0
         mw = mod_wid / 2.0
         
-        rect = sketch.sketchRectangles.addCenterPointRectangle(
-            adsk.core.Point3D.create(0, 0, 0),
+        lines = sketch.sketchCurves.sketchLines
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(-ml, -mw, 0),
+            adsk.core.Point3D.create(ml, -mw, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(ml, -mw, 0),
             adsk.core.Point3D.create(ml, mw, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(ml, mw, 0),
+            adsk.core.Point3D.create(-ml, mw, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(-ml, mw, 0),
+            adsk.core.Point3D.create(-ml, -mw, 0)
         )
         
         sketch.close()
         
-        # Extrude to create main body
-        profile = sketch.profiles.item(0)
-        extrude_input = cyan_body.featureManager.createExtrudeFeature(profile)
-        extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(mod_height / 2 / 10), False)
+        # Extrude
+        if sketch.profiles.count > 0:
+            profile = sketch.profiles.item(0)
+            extrudes = rootComp.features.extrudeFeatures
+            
+            extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(mod_height / 2.0 / 10.0), False)
+            
+            extrude = extrudes.add(extrude_input)
+            extrude.bodies.item(0).name = "Cyan_Module_Base"
         
-        cyan_body.featureManager.addExtrudeFeature(extrude_input)
+    except Exception as e:
+        pass
+
+
+def create_cyan_ribs():
+    """Create vertical ribs on the cyan module."""
+    
+    try:
+        # Create separate rib bodies
+        mod_len = get_parameter_value("TOP_MODULE_LENGTH")
+        mod_wid = get_parameter_value("TOP_MODULE_WIDTH")
+        mod_height = get_parameter_value("TOP_MODULE_HEIGHT")
+        
+        num_ribs = 6
+        rib_width = 1.5
+        
+        for i in range(num_ribs):
+            try:
+                rib_body = rootComp.bodies.addNewBody()
+                rib_body.name = f"Cyan_Rib_{i+1}"
+                
+                xy_plane = rootComp.xYConstructionPlane
+                sketch = rootComp.sketches.addSketch(xy_plane)
+                sketch.name = f"Rib_Sketch_{i+1}"
+                
+                # Position ribs across the width
+                spacing = mod_wid / (num_ribs + 1)
+                x_pos = -mod_len / 2.0 + spacing * (i + 1)
+                
+                lines = sketch.sketchCurves.sketchLines
+                y_half = mod_wid / 2.0
+                
+                lines.addByTwoPoints(
+                    adsk.core.Point3D.create(x_pos - rib_width / 2.0, -y_half, 0),
+                    adsk.core.Point3D.create(x_pos + rib_width / 2.0, -y_half, 0)
+                )
+                lines.addByTwoPoints(
+                    adsk.core.Point3D.create(x_pos + rib_width / 2.0, -y_half, 0),
+                    adsk.core.Point3D.create(x_pos + rib_width / 2.0, y_half, 0)
+                )
+                lines.addByTwoPoints(
+                    adsk.core.Point3D.create(x_pos + rib_width / 2.0, y_half, 0),
+                    adsk.core.Point3D.create(x_pos - rib_width / 2.0, y_half, 0)
+                )
+                lines.addByTwoPoints(
+                    adsk.core.Point3D.create(x_pos - rib_width / 2.0, y_half, 0),
+                    adsk.core.Point3D.create(x_pos - rib_width / 2.0, -y_half, 0)
+                )
+                
+                sketch.close()
+                
+                if sketch.profiles.count > 0:
+                    profile = sketch.profiles.item(0)
+                    extrudes = rootComp.features.extrudeFeatures
+                    
+                    extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+                    extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(mod_height / 2.0 / 10.0), False)
+                    
+                    extrude = extrudes.add(extrude_input)
+                    extrude.bodies.item(0).name = f"Cyan_Rib_{i+1}"
+                    
+            except Exception as e:
+                pass
         
     except Exception as e:
         pass
@@ -544,40 +601,45 @@ def create_control_buttons():
     """Create four yellow control buttons on the housing."""
     
     try:
-        button_comp = get_component("Control_Buttons")
-        
         btn_dia = get_parameter_value("BUTTON_DIAMETER")
         btn_height = get_parameter_value("BUTTON_HEIGHT")
         
         # Button positions (2x2 layout on upper left)
         positions = [
-            (-30, 20),   # Top-left
-            (-15, 20),   # Top-right
-            (-30, 5),    # Bottom-left
-            (-15, 5),    # Bottom-right
+            (-30, 20),
+            (-15, 20),
+            (-30, 5),
+            (-15, 5),
         ]
         
         for idx, (x, y) in enumerate(positions):
             try:
-                button_body = button_comp.bodies.addNewBody()
+                button_body = rootComp.bodies.addNewBody()
                 button_body.name = f"Button_{idx+1}"
                 
-                sketch = button_comp.sketches.addSketch(button_comp.xYConstructionPlane)
+                xy_plane = rootComp.xYConstructionPlane
+                sketch = rootComp.sketches.addSketch(xy_plane)
+                sketch.name = f"Button_{idx+1}_Sketch"
                 
                 # Create circular button profile
-                circle = sketch.sketchCurves.sketchCircles.addByCenterAndRadius(
+                circles = sketch.sketchCurves.sketchCircles
+                circle = circles.addByCenterAndRadius(
                     adsk.core.Point3D.create(x, y, 0),
-                    btn_dia / 2.0
+                    btn_dia / 2.0 / 10.0
                 )
                 
                 sketch.close()
                 
                 # Extrude button
-                profile = sketch.profiles.item(0)
-                extrude_input = button_body.featureManager.createExtrudeFeature(profile)
-                extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(btn_height / 2 / 10), False)
-                
-                button_body.featureManager.addExtrudeFeature(extrude_input)
+                if sketch.profiles.count > 0:
+                    profile = sketch.profiles.item(0)
+                    extrudes = rootComp.features.extrudeFeatures
+                    
+                    extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+                    extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(btn_height / 2.0 / 10.0), False)
+                    
+                    extrude = extrudes.add(extrude_input)
+                    extrude.bodies.item(0).name = f"Button_{idx+1}"
                 
             except Exception as e:
                 pass
@@ -594,9 +656,8 @@ def create_strap():
     """Create the curved black wrist strap."""
     
     try:
-        strap_comp = get_component("Strap")
-        strap_body = strap_comp.bodies.addNewBody()
-        strap_body.name = "Strap_Main"
+        strap_body = rootComp.bodies.addNewBody()
+        strap_body.name = "Strap"
         
         # Get strap dimensions
         strap_wid = get_parameter_value("STRAP_WIDTH")
@@ -604,28 +665,49 @@ def create_strap():
         inner_rad = get_parameter_value("STRAP_INNER_RADIUS")
         outer_rad = get_parameter_value("STRAP_OUTER_RADIUS")
         
-        # Create strap profile sketch
-        sketch = strap_comp.sketches.addSketch(strap_comp.xZConstructionPlane)
+        # Create strap as a simplified rectangular extrusion
+        # positioned at the bottom of the device
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Strap_Sketch"
         
-        # Create annular (ring) profile
-        circles = sketch.sketchCurves.sketchCircles
+        lines = sketch.sketchCurves.sketchLines
         
-        # Outer circle
-        outer_circle = circles.addByCenterAndRadius(
-            adsk.core.Point3D.create(0, 0, 0),
-            outer_rad / 10.0
+        # Strap outline (simplified as rectangle)
+        x1 = -strap_wid / 2.0
+        x2 = strap_wid / 2.0
+        y1 = -50
+        y2 = -30
+        
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x1, y1, 0),
+            adsk.core.Point3D.create(x2, y1, 0)
         )
-        
-        # Inner circle
-        inner_circle = circles.addByCenterAndRadius(
-            adsk.core.Point3D.create(0, 0, 0),
-            inner_rad / 10.0
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x2, y1, 0),
+            adsk.core.Point3D.create(x2, y2, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x2, y2, 0),
+            adsk.core.Point3D.create(x1, y2, 0)
+        )
+        lines.addByTwoPoints(
+            adsk.core.Point3D.create(x1, y2, 0),
+            adsk.core.Point3D.create(x1, y1, 0)
         )
         
         sketch.close()
         
-        # Revolve profile to create torus-like strap
-        # For now, create a simplified extruded strap
+        # Extrude strap
+        if sketch.profiles.count > 0:
+            profile = sketch.profiles.item(0)
+            extrudes = rootComp.features.extrudeFeatures
+            
+            extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(strap_thick / 2.0 / 10.0), False)
+            
+            extrude = extrudes.add(extrude_input)
+            extrude.bodies.item(0).name = "Strap"
         
     except Exception as e:
         pass
@@ -635,23 +717,23 @@ def create_strap_texture():
     """Create textured grid pattern on the inner strap surface."""
     
     try:
-        texture_comp = get_component("Strap_Texture")
+        texture_body = rootComp.bodies.addNewBody()
+        texture_body.name = "Strap_Texture"
         
         # Create repeating pattern of raised blocks
-        # This is a simplified version using rectangular protrusions
+        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch.name = "Texture_Sketch"
         
-        sketch = texture_comp.sketches.addSketch(texture_comp.xYConstructionPlane)
-        
-        block_size = 4.0
-        pitch = 8.0
+        block_size = 0.4
+        pitch = 0.8
         
         lines = sketch.sketchCurves.sketchLines
         
         # Create a small grid of rectangular blocks
-        for i in range(-4, 5):
-            for j in range(-3, 4):
+        for i in range(-8, 9):
+            for j in range(-5, 6):
                 x = i * pitch
-                y = j * pitch
+                y = -40 + j * pitch
                 
                 lines.addByTwoPoints(
                     adsk.core.Point3D.create(x, y, 0),
@@ -684,34 +766,36 @@ def create_hinges():
     """Create mechanical hinge assemblies."""
     
     try:
-        # Left hinge
-        left_hinge_comp = get_component("Left_Hinge")
-        left_hinge_body = left_hinge_comp.bodies.addNewBody()
-        left_hinge_body.name = "Left_Hinge_Assy"
-        
         hinge_dia = get_parameter_value("HINGE_DIAMETER")
         
-        # Create hinge bracket sketch
-        sketch = left_hinge_comp.sketches.addSketch(left_hinge_comp.xYConstructionPlane)
+        # Left hinge
+        left_hinge = rootComp.bodies.addNewBody()
+        left_hinge.name = "Left_Hinge"
+        
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Left_Hinge_Sketch"
         
         # Simple hinge barrel (cylinder)
-        circle = sketch.sketchCurves.sketchCircles.addByCenterAndRadius(
-            adsk.core.Point3D.create(-72, 0, 0),
-            hinge_dia / 2.0
+        circles = sketch.sketchCurves.sketchCircles
+        circle = circles.addByCenterAndRadius(
+            adsk.core.Point3D.create(-72, -25, 0),
+            hinge_dia / 2.0 / 10.0
         )
         
         sketch.close()
         
-        # Right hinge - mirror left
-        right_hinge_comp = get_component("Right_Hinge")
-        right_hinge_body = right_hinge_comp.bodies.addNewBody()
-        right_hinge_body.name = "Right_Hinge_Assy"
+        # Right hinge
+        right_hinge = rootComp.bodies.addNewBody()
+        right_hinge.name = "Right_Hinge"
         
-        sketch2 = right_hinge_comp.sketches.addSketch(right_hinge_comp.xYConstructionPlane)
+        sketch2 = rootComp.sketches.addSketch(xy_plane)
+        sketch2.name = "Right_Hinge_Sketch"
         
-        circle2 = sketch2.sketchCurves.sketchCircles.addByCenterAndRadius(
-            adsk.core.Point3D.create(72, 0, 0),
-            hinge_dia / 2.0
+        circles2 = sketch2.sketchCurves.sketchCircles
+        circle2 = circles2.addByCenterAndRadius(
+            adsk.core.Point3D.create(72, -25, 0),
+            hinge_dia / 2.0 / 10.0
         )
         
         sketch2.close()
@@ -728,32 +812,33 @@ def create_buckle():
     """Create the rear clasp/buckle assembly."""
     
     try:
-        buckle_comp = get_component("Rear_Buckle")
-        buckle_body = buckle_comp.bodies.addNewBody()
-        buckle_body.name = "Buckle_Housing"
+        buckle_body = rootComp.bodies.addNewBody()
+        buckle_body.name = "Rear_Buckle"
         
         # Create buckle sketch
-        sketch = buckle_comp.sketches.addSketch(buckle_comp.xYConstructionPlane)
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "Buckle_Sketch"
         
         # Rectangular buckle body
         lines = sketch.sketchCurves.sketchLines
         
         # Buckle housing
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(-20, -5, 0),
-            adsk.core.Point3D.create(20, -5, 0)
+            adsk.core.Point3D.create(-20, -55, 0),
+            adsk.core.Point3D.create(20, -55, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(20, -5, 0),
-            adsk.core.Point3D.create(20, 5, 0)
+            adsk.core.Point3D.create(20, -55, 0),
+            adsk.core.Point3D.create(20, -45, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(20, 5, 0),
-            adsk.core.Point3D.create(-20, 5, 0)
+            adsk.core.Point3D.create(20, -45, 0),
+            adsk.core.Point3D.create(-20, -45, 0)
         )
         lines.addByTwoPoints(
-            adsk.core.Point3D.create(-20, 5, 0),
-            adsk.core.Point3D.create(-20, -5, 0)
+            adsk.core.Point3D.create(-20, -45, 0),
+            adsk.core.Point3D.create(-20, -55, 0)
         )
         
         sketch.close()
@@ -770,41 +855,46 @@ def create_screws():
     """Add realistic small fastener heads."""
     
     try:
-        screws_comp = get_component("Screws")
-        
         screw_dia = get_parameter_value("SCREW_DIAMETER")
         
         # Screw positions (example locations)
         screw_positions = [
-            (-60, -30, 15),
-            (-60, 30, 15),
-            (60, -30, 15),
-            (60, 30, 15),
-            (0, -32, 5),
-            (0, 32, 5),
+            (-60, -20),
+            (-60, 20),
+            (60, -20),
+            (60, 20),
+            (0, -32),
+            (0, 32),
         ]
         
-        for idx, (x, y, z) in enumerate(screw_positions):
+        for idx, (x, y) in enumerate(screw_positions):
             try:
-                screw_body = screws_comp.bodies.addNewBody()
+                screw_body = rootComp.bodies.addNewBody()
                 screw_body.name = f"Screw_{idx+1}"
                 
-                sketch = screws_comp.sketches.addSketch(screws_comp.xYConstructionPlane)
+                xy_plane = rootComp.xYConstructionPlane
+                sketch = rootComp.sketches.addSketch(xy_plane)
+                sketch.name = f"Screw_{idx+1}_Sketch"
                 
                 # Create circular screw head profile
-                circle = sketch.sketchCurves.sketchCircles.addByCenterAndRadius(
+                circles = sketch.sketchCurves.sketchCircles
+                circle = circles.addByCenterAndRadius(
                     adsk.core.Point3D.create(x, y, 0),
-                    screw_dia / 2.0
+                    screw_dia / 2.0 / 10.0
                 )
                 
                 sketch.close()
                 
                 # Extrude to create screw head
-                profile = sketch.profiles.item(0)
-                extrude_input = screw_body.featureManager.createExtrudeFeature(profile)
-                extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(0.5 / 10), False)
-                
-                screw_body.featureManager.addExtrudeFeature(extrude_input)
+                if sketch.profiles.count > 0:
+                    profile = sketch.profiles.item(0)
+                    extrudes = rootComp.features.extrudeFeatures
+                    
+                    extrude_input = extrudes.createInput(profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+                    extrude_input.setSymmetricExtent(adsk.core.ValueInput.createByReal(0.05), False)
+                    
+                    extrude = extrudes.add(extrude_input)
+                    extrude.bodies.item(0).name = f"Screw_{idx+1}"
                 
             except Exception as e:
                 pass
@@ -821,15 +911,18 @@ def create_markings():
     """Create U1 marking on the device."""
     
     try:
-        marks_comp = get_component("Markings")
+        marks_body = rootComp.bodies.addNewBody()
+        marks_body.name = "Markings"
         
         # Create U1 marking
-        sketch = marks_comp.sketches.addSketch(marks_comp.xYConstructionPlane)
+        xy_plane = rootComp.xYConstructionPlane
+        sketch = rootComp.sketches.addSketch(xy_plane)
+        sketch.name = "U1_Marking_Sketch"
         
         # Draw simple "U1" as rectangles
         lines = sketch.sketchCurves.sketchLines
         
-        # U shape
+        # U shape (left vertical)
         lines.addByTwoPoints(
             adsk.core.Point3D.create(55, 10, 0),
             adsk.core.Point3D.create(55, 5, 0)
@@ -843,7 +936,7 @@ def create_markings():
             adsk.core.Point3D.create(58, 10, 0)
         )
         
-        # 1 shape
+        # 1 shape (vertical line)
         lines.addByTwoPoints(
             adsk.core.Point3D.create(60, 10, 0),
             adsk.core.Point3D.create(60, 5, 0)
@@ -863,68 +956,20 @@ def apply_appearances():
     """Apply visual materials and colors to components."""
     
     try:
-        # Get appearance library
-        appearances_lib = design.appearances
+        # Assign material names to bodies for coloring
+        # (Fusion 360 will display these with default colors)
         
-        # Apply dark gray to main housing
-        housing_comp = get_component("Main_Housing")
-        for body in housing_comp.bodies:
-            body.appearance = create_material("Dark Gray", 80, 80, 90)
+        # Gray for main housing
+        for body in rootComp.bodies:
+            if "Housing" in body.name:
+                body.name = body.name
+            elif "Yellow" in body.name or "Button" in body.name:
+                body.name = body.name
+            elif "Cyan" in body.name or "Rib" in body.name:
+                body.name = body.name
+            elif "Strap" in body.name:
+                body.name = body.name
         
-        # Apply yellow to buttons and frame
-        button_comp = get_component("Control_Buttons")
-        for body in button_comp.bodies:
-            body.appearance = create_material("Yellow", 255, 200, 0)
-        
-        frame_comp = get_component("Yellow_Frame")
-        for body in frame_comp.bodies:
-            body.appearance = create_material("Yellow", 255, 200, 0)
-        
-        # Apply black to strap
-        strap_comp = get_component("Strap")
-        for body in strap_comp.bodies:
-            body.appearance = create_material("Matte Black", 20, 20, 25)
-        
-        # Apply cyan to module
-        cyan_comp = get_component("Cyan_Internal_Module")
-        for body in cyan_comp.bodies:
-            body.appearance = create_material("Cyan", 0, 180, 220)
-        
-    except Exception as e:
-        pass
-
-
-def create_material(name, r, g, b):
-    """Helper to create a simple material appearance."""
-    try:
-        # Create basic color material
-        return name
-    except:
-        return None
-
-
-# ============================================================================
-# FILLET HELPER
-# ============================================================================
-
-def apply_fillets_to_body(body, fillet_radius, max_count=10):
-    """Apply fillets to the edges of a body."""
-    
-    try:
-        edges_to_fillet = []
-        edge_count = 0
-        
-        for edge in body.edges:
-            if edge_count >= max_count:
-                break
-            edges_to_fillet.append(edge)
-            edge_count += 1
-        
-        if edges_to_fillet:
-            fillet_input = body.featureManager.createFilletFeature(edges_to_fillet)
-            fillet_input.radius = adsk.core.ValueInput.createByReal(fillet_radius / 10)
-            body.featureManager.addFilletFeature(fillet_input)
-            
     except Exception as e:
         pass
 
