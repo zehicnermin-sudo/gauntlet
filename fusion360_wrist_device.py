@@ -178,7 +178,7 @@ def create_main_housing():
     
     try:
         # Create base rectangular sketch
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Housing_Base_Sketch"
         
         # Get parameter values (in cm)
@@ -198,16 +198,16 @@ def create_main_housing():
         x1 = -hl + h_rad
         x2 = hl - h_rad
         y1 = -hw + h_rad
-        y2 = hw + h_rad
+        y2 = hw - h_rad
         
         # Create straight segments
         pt1 = adsk.core.Point3D.create(x1, -hw, 0)
         pt2 = adsk.core.Point3D.create(x2, -hw, 0)
         pt3 = adsk.core.Point3D.create(hl, y1, 0)
-        pt4 = adsk.core.Point3D.create(hl, hw - h_rad, 0)
+        pt4 = adsk.core.Point3D.create(hl, y2, 0)
         pt5 = adsk.core.Point3D.create(x2, hw, 0)
         pt6 = adsk.core.Point3D.create(x1, hw, 0)
-        pt7 = adsk.core.Point3D.create(-hl, hw - h_rad, 0)
+        pt7 = adsk.core.Point3D.create(-hl, y2, 0)
         pt8 = adsk.core.Point3D.create(-hl, y1, 0)
         
         lines.addByTwoPoints(pt1, pt2)
@@ -258,7 +258,7 @@ def create_housing_panels():
     """Add shallow recessed panels to main housing."""
     
     try:
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Housing_Panels_Sketch"
         
         lines = sketch.sketchCurves.sketchLines
@@ -314,7 +314,7 @@ def create_front_vents():
     
     try:
         # Create sketch for slots
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Vents_Sketch"
         
         # Get slot parameters
@@ -370,7 +370,7 @@ def create_top_frame():
     
     try:
         # Create frame sketch
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Frame_Sketch"
         
         # Get dimensions (in cm)
@@ -456,7 +456,7 @@ def create_cyan_module():
     
     try:
         # Create module sketch
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Cyan_Module_Sketch"
         
         # Get module dimensions (in cm)
@@ -524,7 +524,7 @@ def create_cyan_ribs():
         
         for i in range(num_ribs):
             try:
-                sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+                sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
                 sketch.name = f"Rib_Sketch_{i+1}"
                 
                 # Position ribs across the width
@@ -598,7 +598,7 @@ def create_control_buttons():
         
         for idx, (x, y) in enumerate(positions):
             try:
-                sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+                sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
                 sketch.name = f"Button_{idx+1}_Sketch"
                 
                 # Create circular button profile
@@ -648,7 +648,7 @@ def create_strap():
         strap_thick = get_parameter_value("STRAP_THICKNESS") / 10.0
         
         # Create strap as a simplified rectangular extrusion
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Strap_Sketch"
         
         lines = sketch.sketchCurves.sketchLines
@@ -704,7 +704,7 @@ def create_strap_texture():
     """Create textured grid pattern on the inner strap surface."""
     
     try:
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Texture_Sketch"
         
         block_size = 0.04
@@ -752,7 +752,7 @@ def create_hinges():
         hinge_dia = get_parameter_value("HINGE_DIAMETER") / 10.0
         
         # Left hinge
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Left_Hinge_Sketch"
         
         # Simple hinge barrel (cylinder)
@@ -781,7 +781,7 @@ def create_hinges():
                     break
         
         # Right hinge
-        sketch2 = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch2 = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch2.name = "Right_Hinge_Sketch"
         
         circles2 = sketch2.sketchCurves.sketchCircles
@@ -820,7 +820,7 @@ def create_buckle():
     """Create the rear clasp/buckle assembly."""
     
     try:
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "Buckle_Sketch"
         
         # Rectangular buckle body
@@ -887,7 +887,7 @@ def create_screws():
         
         for idx, (x, y) in enumerate(screw_positions):
             try:
-                sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+                sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
                 sketch.name = f"Screw_{idx+1}_Sketch"
                 
                 # Create circular screw head profile
@@ -930,7 +930,7 @@ def create_markings():
     """Create U1 marking on the device."""
     
     try:
-        sketch = rootComp.sketches.addSketch(rootComp.xYConstructionPlane)
+        sketch = rootComp.sketches.add(rootComp.xYConstructionPlane)
         sketch.name = "U1_Marking_Sketch"
         
         # Draw simple "U1" as rectangles
